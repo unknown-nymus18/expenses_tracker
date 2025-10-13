@@ -1,12 +1,14 @@
 import 'package:expenses_app/models/budget_category.dart';
 import 'package:expenses_app/models/monthly_budget.dart';
 import 'package:expenses_app/models/transaction.dart';
+import 'package:expenses_app/models/settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
 
 class HiveService {
   static final String _budgetBoxName = 'budgets';
   static final String _transactionBoxName = 'transactions';
+  static final String _settingsBoxName = 'settings';
 
   static get amountLeftInBudget {
     final budget = getCurrentMonthBudget();
@@ -24,9 +26,17 @@ class HiveService {
     Hive.registerAdapter(MonthlyBudgetAdapter());
     Hive.registerAdapter(BudgetCategoryAdapter());
     Hive.registerAdapter(TransactionAdapter());
+    Hive.registerAdapter(SettingsStateAdapter());
 
     await Hive.openBox<MonthlyBudget>(_budgetBoxName);
     await Hive.openBox<Transaction>(_transactionBoxName);
+    await Hive.openBox<SettingsState>(_settingsBoxName);
+
+    // Initialize default settings if none exist
+    if (_settingsBox.isEmpty) {
+      final defaultSettings = SettingsState(isDarkMode: false, fontSize: 14);
+      await _settingsBox.put('settings', defaultSettings);
+    }
 
     if (!hasCurrentMonthBudget) {
       final now = DateTime.now();
@@ -41,11 +51,63 @@ class HiveService {
     }
   }
 
+  static Future<void> clearAllData() async {
+    try {
+      // Clear all data from boxes except settings
+      await _budgetBox.clear();
+      await _transactionBox.clear();
+
+      // Optionally, recreate default budget for current month
+      final now = DateTime.now();
+      final newBudget = MonthlyBudget(
+        id: now.toIso8601String(),
+        month: DateTime(now.year, now.month),
+        totalIncome: 0.0,
+        createdAt: DateTime.now(),
+        categories: getDefaultCategories(),
+      );
+      await saveMonthlyBudget(newBudget);
+    } catch (e) {
+      print('Error clearing data: $e');
+      rethrow;
+    }
+  }
+
+  // Alternative: Delete everything including the boxes themselves and reinitialize
+  static Future<void> deleteAllData() async {
+    try {
+      // Delete boxes from disk (except settings)
+      await _budgetBox.deleteFromDisk();
+      await _transactionBox.deleteFromDisk();
+
+      // Reinitialize the boxes so the app continues to work
+      await Hive.openBox<MonthlyBudget>(_budgetBoxName);
+      await Hive.openBox<Transaction>(_transactionBoxName);
+
+      // Create a fresh default budget
+      final now = DateTime.now();
+      final newBudget = MonthlyBudget(
+        id: now.toIso8601String(),
+        month: DateTime(now.year, now.month),
+        totalIncome: 0.0,
+        createdAt: DateTime.now(),
+        categories: getDefaultCategories(),
+      );
+      await saveMonthlyBudget(newBudget);
+    } catch (e) {
+      print('Error deleting data: $e');
+      rethrow;
+    }
+  }
+
   static Box<MonthlyBudget> get _budgetBox =>
       Hive.box<MonthlyBudget>(_budgetBoxName);
 
   static Box<Transaction> get _transactionBox =>
       Hive.box<Transaction>(_transactionBoxName);
+
+  static Box<SettingsState> get _settingsBox =>
+      Hive.box<SettingsState>(_settingsBoxName);
 
   static MonthlyBudget? getCurrentMonthBudget() {
     final now = DateTime.now();
@@ -152,25 +214,25 @@ class HiveService {
       BudgetCategory(
         id: 'food',
         name: 'Food',
-        color: Colors.green,
+        color: Color.fromRGBO(170, 205, 186, 1),
         budgetAmount: 0,
       ),
       BudgetCategory(
         id: 'transport',
         name: 'Transport',
-        color: Colors.blue,
+        color: Color.fromRGBO(248, 210, 209, 1),
         budgetAmount: 0,
       ),
       BudgetCategory(
         id: 'entertainment',
         name: 'Entertainment',
-        color: Colors.red,
+        color: Color.fromRGBO(255, 215, 142, 1),
         budgetAmount: 0,
       ),
       BudgetCategory(
         id: 'savings',
         name: 'Savings',
-        color: Colors.purple,
+        color: Color.fromRGBO(104, 108, 72, 1),
         budgetAmount: 0,
       ),
     ];
@@ -275,4 +337,27 @@ class HiveService {
   }
 
   static Listenable get transactionListenable => _transactionBox.listenable();
+
+  // Settings management
+  static SettingsState? getSettings() {
+    return _settingsBox.get('settings');
+  }
+
+  static Future<void> updateDarkMode(bool isDarkMode) async {
+    final settings = getSettings();
+    if (settings != null) {
+      settings.isDarkMode = isDarkMode;
+      await _settingsBox.put('settings', settings);
+    }
+  }
+
+  static Future<void> updateFontSize(int fontSize) async {
+    final settings = getSettings();
+    if (settings != null) {
+      settings.fontSize = fontSize;
+      await _settingsBox.put('settings', settings);
+    }
+  }
+
+  static Listenable get settingsListenable => _settingsBox.listenable();
 }

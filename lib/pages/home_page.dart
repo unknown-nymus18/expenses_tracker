@@ -1,9 +1,11 @@
+import 'package:expenses_app/components/calendar.dart';
 import 'package:expenses_app/components/category_card.dart';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/order_tile.dart';
 import 'package:expenses_app/components/weekly_chart.dart';
 import 'package:expenses_app/models/budget_category.dart';
 import 'package:expenses_app/models/HiveService.dart';
+import 'package:expenses_app/models/transaction.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -53,6 +55,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    for (Transaction transaction in HiveService.getAllTransactions()) {
+      print(
+        'Transaction: ${transaction.title}, Amount: ${transaction.amount}, Date: ${transaction.createdAt}',
+      );
+    }
     return SingleChildScrollView(
       controller: controller,
       child: Column(
@@ -97,28 +104,12 @@ class _HomePageState extends State<HomePage> {
                   ),
           ),
           SizedBox(height: 20),
-          Padding(
-            padding: EdgeInsetsGeometry.only(left: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "User in the last week",
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.w600),
-              ),
-            ),
+          // Content-driven calendar - sizes itself based on content
+          SizedBox(
+            height: 500,
+            width: 500,
+            child: Calendar(highlightedDays: HiveService.getAllTransactions()),
           ),
-          Padding(
-            padding: EdgeInsetsGeometry.only(left: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "+ 2.1%",
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
-              ),
-            ),
-          ),
-          SizedBox(height: 20),
-          WeeklyChart(),
           SizedBox(height: 20),
           Padding(
             padding: EdgeInsetsGeometry.only(left: 20),

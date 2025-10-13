@@ -12,7 +12,6 @@ void main() async {
     await HiveService.init();
   } catch (e) {
     print('Hive initialization error: $e');
-    // You might want to show an error dialog or use a fallback storage method
   }
 
   runApp(
@@ -31,11 +30,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Expenses App',
-      theme: Provider.of<ThemeProvider>(context).themeData,
-      home: Home(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Expenses App',
+          theme: themeProvider.themeData,
+          home: Home(),
+        );
+      },
     );
   }
 }
