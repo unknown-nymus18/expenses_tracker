@@ -1,6 +1,5 @@
 ﻿import 'package:expenses_app/models/HiveService.dart';
 import 'package:expenses_app/pages/auth_gate.dart';
-import 'package:expenses_app/pages/home.dart';
 import 'package:expenses_app/providers/bottom_navbar_manager.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
