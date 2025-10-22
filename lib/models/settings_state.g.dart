@@ -16,7 +16,7 @@ class SettingsStateAdapter extends TypeAdapter<SettingsState> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    
+
     // Handle migration from old format (3 fields) to new format (2 fields)
     // Old format: 0=isDarkMode, 1=isBiometric, 2=fontSize
     // New format: 0=isDarkMode, 1=fontSize

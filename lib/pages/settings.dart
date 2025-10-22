@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/models/HiveService.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
+import 'package:expenses_app/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -109,6 +110,7 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    print(FirebaseService.getCurrentUser());
     return Center(
       child: Column(
         children: [
@@ -237,13 +239,43 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                 ),
                 // Optional: Content overlay
                 Center(
-                  child: Text(
-                    'Settings',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        height: 100,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Provider.of<ThemeProvider>(
+                            context,
+                          ).themeData.colorScheme.surface.withOpacity(0.3),
+                        ),
+                        child: Icon(
+                          Icons.person,
+                          size: 80,
+                          color: Provider.of<ThemeProvider>(
+                            context,
+                          ).themeData.colorScheme.onPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        FirebaseService.getCurrentUserName() ??
+                            FirebaseService.getCurrentUser()?.email?.split(
+                              '@',
+                            )[0] ??
+                            'User',
+                        style: TextStyle(
+                          color: Provider.of<ThemeProvider>(
+                            context,
+                          ).themeData.colorScheme.onSurface,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                    ],
                   ),
                 ),
               ],
@@ -263,17 +295,24 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                     _buildSettingTile(
                       icon: Icons.dark_mode,
                       title: 'Dark Mode',
-                      trailing: Switch(
-                        activeColor: Provider.of<ThemeProvider>(
-                          context,
-                        ).themeData.colorScheme.secondary,
-                        value: Provider.of<ThemeProvider>(context).isDarkMode(),
-                        onChanged: (value) {
-                          Provider.of<ThemeProvider>(
-                            context,
-                            listen: false,
-                          ).toggleTheme();
+                      trailing: GestureDetector(
+                        onTap: () {
+                          // Prevent tap from propagating to ListTile
                         },
+                        child: Switch(
+                          activeColor: Provider.of<ThemeProvider>(
+                            context,
+                          ).themeData.colorScheme.secondary,
+                          value: Provider.of<ThemeProvider>(
+                            context,
+                          ).isDarkMode(),
+                          onChanged: (value) {
+                            Provider.of<ThemeProvider>(
+                              context,
+                              listen: false,
+                            ).toggleTheme();
+                          },
+                        ),
                       ),
                     ),
                     _buildSettingTile(
@@ -348,6 +387,39 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                       trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
                         // Navigate to help
+                      },
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // Account Section
+                    _buildSectionHeader('Account'),
+                    _buildSettingTile(
+                      icon: Icons.logout,
+                      title: 'Sign Out',
+                      textColor: Colors.red,
+                      onTap: () async {
+                        try {
+                          final firebaseService = FirebaseService();
+                          await firebaseService.signOut();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Signed out successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error signing out: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                     SizedBox(height: 100),
