@@ -1,24 +1,9 @@
-import 'package:hive/hive.dart';
-part 'transaction.g.dart';
-
-@HiveType(typeId: 2)
-class Transaction extends HiveObject {
-  @HiveField(0)
+class Transaction {
   String id;
-
-  @HiveField(1)
   String title;
-
-  @HiveField(2)
   String amount;
-
-  @HiveField(3)
   String category;
-
-  @HiveField(4)
   DateTime createdAt;
-
-  @HiveField(5)
   String? description;
 
   Transaction({

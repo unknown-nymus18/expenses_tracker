@@ -1,11 +1,14 @@
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/labeled_chart.dart';
+import 'package:expenses_app/components/line_chart.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/models/monthly_budget.dart';
+import 'package:expenses_app/models/transaction.dart' as models;
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:expenses_app/components/donut_chart.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class Analytics extends StatefulWidget {
   const Analytics({super.key});
@@ -139,6 +142,48 @@ class _AnalyticsState extends State<Analytics> {
                 ),
                 SizedBox(height: 25),
 
+                // Line Chart for spending trends
+                StreamBuilder<List<models.Transaction>>(
+                  stream: FirebaseService.getCurrentMonthTransactionsStream(),
+                  builder: (context, transactionSnapshot) {
+                    if (!transactionSnapshot.hasData) {
+                      return SizedBox.shrink();
+                    }
+
+                    final transactions = transactionSnapshot.data!;
+
+                    // Group transactions by day and calculate daily spending
+                    final Map<String, double> dailySpending = {};
+                    for (var transaction in transactions) {
+                      final dateKey = DateFormat(
+                        'MMM dd',
+                      ).format(transaction.createdAt);
+                      dailySpending[dateKey] =
+                          (dailySpending[dateKey] ?? 0) +
+                          double.parse(transaction.amount);
+                    }
+
+                    // Get last 7 days of data
+                    final now = DateTime.now();
+                    final List<ChartDataPoint> chartData = [];
+                    for (int i = 6; i >= 0; i--) {
+                      final date = now.subtract(Duration(days: i));
+                      final dateKey = DateFormat('MMM dd').format(date);
+                      final dayLabel = DateFormat('EEE').format(date);
+                      final spending = dailySpending[dateKey] ?? 0.0;
+                      chartData.add(
+                        ChartDataPoint(label: dayLabel, value: spending),
+                      );
+                    }
+
+                    return SpendingLineChart(
+                      dataPoints: chartData,
+                      title: 'Weekly Spending Trend',
+                    );
+                  },
+                ),
+                SizedBox(height: 25),
+
                 Container(
                   margin: EdgeInsets.symmetric(horizontal: 20),
                   padding: EdgeInsets.all(20),
@@ -202,18 +247,7 @@ class _AnalyticsState extends State<Analytics> {
                     ],
                   ),
                 ),
-                SizedBox(height: 30),
-
-                ...List.generate(
-                  50,
-                  (index) => ListTile(
-                    title: Text(
-                      'Item $index',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 100),
+                SizedBox(height: 120),
               ],
             ),
           ),

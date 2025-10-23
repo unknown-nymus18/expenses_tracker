@@ -1,23 +1,10 @@
 import 'dart:ui';
 
-import 'package:hive/hive.dart';
-part 'budget_category.g.dart';
-
-@HiveType(typeId: 1)
 class BudgetCategory {
-  @HiveField(0)
   String id;
-
-  @HiveField(1)
   String name;
-
-  @HiveField(2)
   int colorValue;
-
-  @HiveField(3)
   double budgetAmount;
-
-  @HiveField(4)
   double spent;
 
   BudgetCategory({

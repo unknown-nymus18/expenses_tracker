@@ -2,9 +2,12 @@ import 'package:expenses_app/components/calendar.dart';
 import 'package:expenses_app/components/category_card.dart';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/order_tile.dart';
+import 'package:expenses_app/components/transaction_tile.dart';
+import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/models/transaction.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -93,7 +96,7 @@ class _HomePageState extends State<HomePage> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Last Orders",
+                        "Last 5 Orders",
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
@@ -102,15 +105,32 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  ...List.generate(
-                    10,
-                    (index) => OrderTile(
-                      orderName: "Name",
-                      price: index.toDouble(),
-                      date: DateTime.now(),
-                    ),
+                  StreamBuilder<List<Transaction>>(
+                    stream: FirebaseService.getAllTransactionsStream(),
+                    builder: (context, snapshot) {
+                      final lastTransactions = snapshot.data ?? [];
+                      return Column(
+                        children: List.generate(
+                          lastTransactions.length > 5
+                              ? 5
+                              : lastTransactions.length,
+                          (index) {
+                            final transaction = lastTransactions[index];
+                            return TransactionTile(
+                              transaction: transaction,
+                              isDark: Provider.of<ThemeProvider>(
+                                context,
+                              ).isDarkMode(),
+                              colorScheme: Provider.of<ThemeProvider>(
+                                context,
+                              ).themeData.colorScheme,
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
-                  SizedBox(height: 150),
+                  ...[SizedBox(height: 120)],
                 ],
               ),
             );

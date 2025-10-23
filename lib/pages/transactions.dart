@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:expenses_app/components/card_add.dart';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/order_tile.dart';
+import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/components/user_card.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/models/transaction.dart';
@@ -242,6 +243,8 @@ class _TransactionsState extends State<Transactions> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode();
     return SingleChildScrollView(
       controller: controller,
       child: Column(
@@ -316,15 +319,13 @@ class _TransactionsState extends State<Transactions> {
               return Column(
                 children: List.generate(transactions.length, (index) {
                   final Transaction transaction = transactions[index];
-                  return OrderTile(
-                    onLongPress: () async {
-                      await FirebaseService.deleteTransaction(transaction.id);
-                    },
-                    orderName: transaction.title,
-                    price: transaction.amount.isEmpty
-                        ? 0
-                        : double.tryParse(transaction.amount) ?? 0,
-                    date: transaction.createdAt,
+                  return Padding(
+                    padding: EdgeInsetsGeometry.all(12),
+                    child: TransactionTile(
+                      transaction: transaction,
+                      isDark: isDark,
+                      colorScheme: themeProvider.themeData.colorScheme,
+                    ),
                   );
                 }),
               );
