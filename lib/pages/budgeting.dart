@@ -1,7 +1,8 @@
 import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/models/budget_category.dart';
-import 'package:expenses_app/models/HiveService.dart';
+import 'package:expenses_app/models/monthly_budget.dart';
+import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,43 +16,11 @@ class BudgetingPage extends StatefulWidget {
 
 class _BudgetingPageState extends State<BudgetingPage> {
   ScrollController controller = ScrollController();
-  List<BudgetCategory> categories = [];
-  double totalIncome = 0.0;
 
   @override
   void initState() {
     super.initState();
     onScroll(controller, context);
-    _loadBudgetData();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadBudgetData();
-  }
-
-  void _loadBudgetData() {
-    try {
-      final currentBudget = HiveService.getCurrentMonthBudget();
-      if (currentBudget != null) {
-        categories = currentBudget.categories;
-        totalIncome = currentBudget.totalIncome;
-      } else {
-        categories = [];
-        totalIncome = 0.0;
-      }
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      print('Error loading budget data: $e');
-      categories = [];
-      totalIncome = 0.0;
-      if (mounted) {
-        setState(() {});
-      }
-    }
   }
 
   void _showAddIncomeDialog() {
@@ -267,7 +236,7 @@ class _BudgetingPageState extends State<BudgetingPage> {
 
   void _updateIncome(double income) async {
     try {
-      final currentBudget = HiveService.getCurrentMonthBudget();
+      final currentBudget = await FirebaseService.getCurrentMonthBudget();
       if (currentBudget != null) {
         // Calculate current total budgeted amount
         double currentTotalBudgeted = currentBudget.categories.fold(
@@ -330,11 +299,11 @@ class _BudgetingPageState extends State<BudgetingPage> {
 
   void _proceedWithIncomeUpdate(double income) async {
     try {
-      final currentBudget = HiveService.getCurrentMonthBudget();
+      final currentBudget = await FirebaseService.getCurrentMonthBudget();
       if (currentBudget != null) {
         currentBudget.totalIncome = income;
-        await currentBudget.save();
-        _loadBudgetData();
+        await FirebaseService.saveMonthlyBudget(currentBudget);
+        // StreamBuilder will automatically update the UI
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -356,7 +325,10 @@ class _BudgetingPageState extends State<BudgetingPage> {
 
   void _updateCategoryBudget(String categoryId, double amount) async {
     try {
-      final result = await HiveService.updateCategoryBudget(categoryId, amount);
+      final result = await FirebaseService.updateCategoryBudget(
+        categoryId,
+        amount,
+      );
 
       if (result['success']) {
         // Show success message
@@ -367,7 +339,7 @@ class _BudgetingPageState extends State<BudgetingPage> {
             duration: Duration(seconds: 2),
           ),
         );
-        _loadBudgetData();
+        // StreamBuilder will automatically update the UI
       } else {
         // Show budget limit exceeded dialog
         showDialog(
@@ -418,286 +390,296 @@ class _BudgetingPageState extends State<BudgetingPage> {
     }
   }
 
-  double get totalBudgeted {
-    return categories.fold(0, (sum, category) => sum + category.budgetAmount);
-  }
-
-  double get remainingBudget {
-    return totalIncome - totalBudgeted;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: controller,
-      child: Column(
-        children: [
-          SizedBox(height: 70),
+    return StreamBuilder<MonthlyBudget?>(
+      stream: FirebaseService.getCurrentMonthBudgetStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
 
-          // Income Card
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Provider.of<ThemeProvider>(
-                    context,
-                  ).themeData.colorScheme.primary,
-                  Provider.of<ThemeProvider>(
-                    context,
-                  ).themeData.colorScheme.primary.withOpacity(0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Provider.of<ThemeProvider>(
-                    context,
-                  ).themeData.colorScheme.primary.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: Offset(0, 8),
+        final budget = snapshot.data;
+        final categories = budget?.categories ?? [];
+        final totalIncome = budget?.totalIncome ?? 0.0;
+        final totalBudgeted = categories.fold<double>(
+          0,
+          (sum, category) => sum + category.budgetAmount,
+        );
+        final remainingBudget = totalIncome - totalBudgeted;
+
+        return SingleChildScrollView(
+          controller: controller,
+          child: Column(
+            children: [
+              SizedBox(height: 70),
+
+              // Income Card
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Provider.of<ThemeProvider>(
+                        context,
+                      ).themeData.colorScheme.primary,
+                      Provider.of<ThemeProvider>(
+                        context,
+                      ).themeData.colorScheme.primary.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Provider.of<ThemeProvider>(
+                        context,
+                      ).themeData.colorScheme.primary.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 0,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Monthly Income',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _showAddIncomeDialog,
+                          icon: Icon(Icons.edit, color: Colors.white, size: 20),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '\$${totalIncome.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d{1,3})(?=(\\d{3})+(?!\\d))'), (Match m) => '${m[1]},')}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Remaining: \$${remainingBudget.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d{1,3})(?=(\\d{3})+(?!\\d))'), (Match m) => '${m[1]},')}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 30),
+
+              // Categories Header
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Monthly Income',
+                      'Budget Categories',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Provider.of<ThemeProvider>(
+                          context,
+                        ).themeData.colorScheme.onSurface,
                       ),
                     ),
-                    IconButton(
-                      onPressed: _showAddIncomeDialog,
-                      icon: Icon(Icons.edit, color: Colors.white, size: 20),
+                    Text(
+                      '\$${totalBudgeted.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Provider.of<ThemeProvider>(
+                          context,
+                        ).themeData.colorScheme.primary,
+                      ),
                     ),
                   ],
                 ),
-                Text(
-                  '\$${totalIncome.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d{1,3})(?=(\\d{3})+(?!\\d))'), (Match m) => '${m[1]},')}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Remaining: \$${remainingBudget.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d{1,3})(?=(\\d{3})+(?!\\d))'), (Match m) => '${m[1]},')}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 30),
-
-          // Categories Header
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Budget Categories',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Provider.of<ThemeProvider>(
-                      context,
-                    ).themeData.colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  '\$${totalBudgeted.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Provider.of<ThemeProvider>(
-                      context,
-                    ).themeData.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 20),
-
-          // Categories List
-          if (categories.isEmpty)
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: 20),
-              padding: EdgeInsets.all(40),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No budget categories available',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Create a monthly budget to get started',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
               ),
-            )
-          else
-            ...categories.map(
-              (category) => Container(
-                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Provider.of<ThemeProvider>(
-                    context,
-                  ).themeData.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: category.color.withOpacity(0.3),
-                    width: 2,
+
+              SizedBox(height: 20),
+
+              // Categories List
+              if (categories.isEmpty)
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.all(40),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No budget categories available',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Create a monthly budget to get started',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: category.color.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 0,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.all(16),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
+                )
+              else
+                ...categories.map(
+                  (category) => Container(
+                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
-                      color: category.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Provider.of<ThemeProvider>(
+                        context,
+                      ).themeData.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: category.color.withOpacity(0.3),
-                        width: 1,
+                        width: 2,
                       ),
-                    ),
-                    child: Icon(
-                      Icons.category,
-                      color: category.color,
-                      size: 24,
-                    ),
-                  ),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          category.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Provider.of<ThemeProvider>(
-                              context,
-                            ).themeData.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
                           color: category.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          blurRadius: 10,
+                          spreadRadius: 0,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.all(16),
+                      leading: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: category.color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: category.color.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
-                        child: Text(
-                          'BUDGET',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: category.color,
-                            letterSpacing: 0.5,
-                          ),
+                        child: Icon(
+                          Icons.category,
+                          color: category.color,
+                          size: 24,
                         ),
                       ),
-                    ],
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 8),
-                      Row(
+                      title: Row(
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
-                              'Budget: \$${category.budgetAmount.toStringAsFixed(0)}',
+                              category.name,
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Provider.of<ThemeProvider>(
+                                  context,
+                                ).themeData.colorScheme.onSurface,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'Spent: \$${category.spent.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: category.color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: category.color.withOpacity(0.3),
+                                width: 1,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
+                            ),
+                            child: Text(
+                              'BUDGET',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: category.color,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: category.budgetAmount > 0
-                            ? (category.spent / category.budgetAmount).clamp(
-                                0.0,
-                                1.0,
-                              )
-                            : 0.0,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          category.isOverBudget ? Colors.red : category.color,
-                        ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Budget: \$${category.budgetAmount.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Spent: \$${category.spent.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: category.budgetAmount > 0
+                                ? (category.spent / category.budgetAmount)
+                                      .clamp(0.0, 1.0)
+                                : 0.0,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              category.isOverBudget
+                                  ? Colors.red
+                                  : category.color,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    onPressed: () => _showEditBudgetDialog(category),
-                    icon: Icon(Icons.edit, color: category.color),
+                      trailing: IconButton(
+                        onPressed: () => _showEditBudgetDialog(category),
+                        icon: Icon(Icons.edit, color: category.color),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-          SizedBox(height: 100),
-        ],
-      ),
+              SizedBox(height: 100),
+            ],
+          ),
+        );
+      },
     );
   }
 

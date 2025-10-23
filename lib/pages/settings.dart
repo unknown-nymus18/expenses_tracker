@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
-import 'package:expenses_app/models/HiveService.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:flutter/material.dart';
@@ -521,7 +520,7 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
           TextButton(
             onPressed: () async {
               try {
-                await HiveService.deleteAllData();
+                await FirebaseService.deleteAllUserData();
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

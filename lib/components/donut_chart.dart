@@ -16,6 +16,8 @@ class DonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 350,
       padding: const EdgeInsets.all(20),
@@ -38,13 +40,16 @@ class DonutChart extends StatelessWidget {
                 children: [
                   Text(
                     'Total',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      fontSize: 16,
+                    ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     '\$${totalAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: isDark ? Colors.white : Colors.black87,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
