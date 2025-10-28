@@ -1,6 +1,7 @@
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/labeled_chart.dart';
 import 'package:expenses_app/components/line_chart.dart';
+import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/models/monthly_budget.dart';
 import 'package:expenses_app/models/transaction.dart' as models;
@@ -43,7 +44,7 @@ class _AnalyticsState extends State<Analytics> {
               title: Text("Analytics", style: TextStyle(color: Colors.white)),
               elevation: 0,
             ),
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: LoadingScreen()),
           );
         }
 
@@ -159,8 +160,7 @@ class _AnalyticsState extends State<Analytics> {
                         'MMM dd',
                       ).format(transaction.createdAt);
                       dailySpending[dateKey] =
-                          (dailySpending[dateKey] ?? 0) +
-                          double.parse(transaction.amount);
+                          (dailySpending[dateKey] ?? 0) + transaction.amount;
                     }
 
                     // Get last 7 days of data

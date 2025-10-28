@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:expenses_app/services/firebase_service.dart';
+import 'package:expenses_app/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -289,6 +290,34 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                 padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    // Profile Section
+                    Column(
+                      children: [
+                        Text(
+                          'Manage your account and preferences',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Divider(),
+                      ],
+                    ),
+                    _buildSettingTile(
+                      icon: Icons.person,
+                      title: 'Profile',
+                      subtitle: 'View and edit profile information',
+                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(),
+                          ),
+                        );
+                      },
+                    ),
                     // Appearance Section
                     _buildSectionHeader('Appearance'),
                     _buildSettingTile(
@@ -313,37 +342,6 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                           },
                         ),
                       ),
-                    ),
-                    _buildSettingTile(
-                      icon: Icons.text_fields,
-                      title: 'Font Size',
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        // Navigate to font size selector
-                      },
-                    ),
-
-                    SizedBox(height: 20),
-
-                    // Budget Settings Section
-                    _buildSectionHeader('Budget Settings'),
-                    _buildSettingTile(
-                      icon: Icons.attach_money,
-                      title: 'Currency',
-                      subtitle: 'USD (\$)',
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        // Navigate to currency selector
-                      },
-                    ),
-                    _buildSettingTile(
-                      icon: Icons.calendar_today,
-                      title: 'Budget Reset Day',
-                      subtitle: '1st of each month',
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        // Navigate to day selector
-                      },
                     ),
 
                     SizedBox(height: 20),

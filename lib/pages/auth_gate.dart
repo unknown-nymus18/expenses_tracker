@@ -1,3 +1,4 @@
+import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/pages/home.dart';
 import 'package:expenses_app/pages/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,7 +14,7 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         // Show loading indicator while checking auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(body: Center(child: CircularProgressIndicator()));
+          return Scaffold(body: Center(child: LoadingScreen()));
         }
 
         // User is signed in

@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/models/budget_category.dart';
+import 'package:expenses_app/components/blur.dart';
+import 'package:expenses_app/components/category_card.dart';
+import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/models/monthly_budget.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
@@ -396,7 +399,7 @@ class _BudgetingPageState extends State<BudgetingPage> {
       stream: FirebaseService.getCurrentMonthBudgetStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return Center(child: LoadingScreen());
         }
 
         final budget = snapshot.data;
@@ -628,23 +631,31 @@ class _BudgetingPageState extends State<BudgetingPage> {
                           SizedBox(height: 8),
                           Row(
                             children: [
-                              Flexible(
+                              Expanded(
                                 child: Text(
                                   'Budget: \$${category.budgetAmount.toStringAsFixed(0)}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[600],
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey[300]
+                                        : Colors.grey[600],
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Flexible(
+                              SizedBox(width: 16),
+                              Expanded(
                                 child: Text(
                                   'Spent: \$${category.spent.toStringAsFixed(0)}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[600],
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey[300]
+                                        : Colors.grey[600],
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,

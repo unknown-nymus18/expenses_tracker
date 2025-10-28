@@ -65,8 +65,7 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final categoryColor = _getCategoryColor(transaction.category);
-    final amount = double.tryParse(transaction.amount) ?? 0.0;
-    final formattedAmount = '\$${amount.toStringAsFixed(2)}';
+    final formattedAmount = '\$${transaction.amount.toStringAsFixed(2)}';
     final date = transaction.createdAt;
     final formattedDate = DateFormat('MMM dd, yyyy').format(date);
     final formattedTime = DateFormat('hh:mm a').format(date);
@@ -225,8 +224,7 @@ class TransactionTile extends StatelessWidget {
   }
 
   void _showTransactionDetails(BuildContext context) {
-    final amount = double.tryParse(transaction.amount) ?? 0.0;
-    final formattedAmount = '\$${amount.toStringAsFixed(2)}';
+    final formattedAmount = '\$${transaction.amount.toStringAsFixed(2)}';
     final date = transaction.createdAt;
     final formattedDate = DateFormat('EEEE, MMMM dd, yyyy').format(date);
     final formattedTime = DateFormat('hh:mm a').format(date);

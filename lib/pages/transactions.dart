@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:expenses_app/components/card_add.dart';
 import 'package:expenses_app/components/functions.dart';
+import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/components/order_tile.dart';
 import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/components/user_card.dart';
@@ -20,6 +21,9 @@ class Transactions extends StatefulWidget {
 class _TransactionsState extends State<Transactions> {
   ScrollController controller = ScrollController();
   String? selectedCategoryId;
+
+  DateTime? filterDate;
+  double? filterPrice;
 
   @override
   void initState() {
@@ -146,13 +150,27 @@ class _TransactionsState extends State<Transactions> {
                               descriptionController.text.isNotEmpty &&
                               selectedCategoryId != null &&
                               nameController.text.isNotEmpty) {
+                            // Parse amount as double
+                            final amount = double.tryParse(
+                              amountController.text,
+                            );
+                            if (amount == null || amount <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Please enter a valid amount'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
                             final result =
                                 await FirebaseService.makeTransaction(
                                   Transaction(
                                     id: DateTime.now().millisecondsSinceEpoch
                                         .toString(),
                                     title: nameController.text,
-                                    amount: amountController.text,
+                                    amount: amount,
                                     category: selectedCategoryId!,
                                     createdAt: DateTime.now(),
                                     description: descriptionController.text,
@@ -241,6 +259,134 @@ class _TransactionsState extends State<Transactions> {
     setState(() {});
   }
 
+  void _selectDate() async {
+    filterDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Provider.of<ThemeProvider>(context).isDarkMode()
+                  ? Colors.grey[900]!
+                  : Colors.grey[500]!,
+              onPrimary: Provider.of<ThemeProvider>(context).isDarkMode()
+                  ? Colors.black
+                  : Colors.white,
+              surface: Provider.of<ThemeProvider>(context).isDarkMode()
+                  ? Colors.grey[700]!
+                  : Colors.grey[200]!,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Provider.of<ThemeProvider>(
+              context,
+            ).themeData.scaffoldBackgroundColor,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    filter();
+  }
+
+  void _selectPrice() async {
+    TextEditingController priceController = TextEditingController();
+    priceController.text = filterPrice?.toString() ?? '';
+    filterPrice = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        double? selectedPrice;
+        return AlertDialog(
+          title: Text('Select Price'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Enter minimum price:'),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  selectedPrice = double.tryParse(value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(selectedPrice);
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+    filter();
+  }
+
+  void filter() {
+    if (filterDate != null || filterPrice != null) {
+      setState(() {});
+    }
+  }
+
+  void showFilterDialogue() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Date Filter", style: TextStyle(fontSize: 24)),
+              SizedBox(height: 20),
+              MaterialButton(
+                onPressed: _selectDate,
+                color: Provider.of<ThemeProvider>(
+                  context,
+                ).themeData.colorScheme.primary,
+                child: Text('Select Date'),
+              ),
+              SizedBox(height: 20),
+              Text("Price Filter", style: TextStyle(fontSize: 24)),
+              SizedBox(height: 20),
+              MaterialButton(
+                onPressed: _selectPrice,
+                color: Provider.of<ThemeProvider>(
+                  context,
+                ).themeData.colorScheme.primary,
+                child: Text('Select Minimum Price'),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {});
+              },
+              child: Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                filterDate = null;
+                filterPrice = null;
+                Navigator.of(context).pop();
+                setState(() {});
+              },
+              child: Text('Clear Filters'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -289,48 +435,115 @@ class _TransactionsState extends State<Transactions> {
             padding: const EdgeInsets.all(16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                "Transactions",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Transactions",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  GestureDetector(
+                    onTap: showFilterDialogue,
+                    child: Row(
+                      children: [
+                        Text("Filter"),
+                        SizedBox(width: 10),
+                        Icon(Icons.filter_list),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          StreamBuilder<List<Transaction>>(
-            stream: FirebaseService.getAllTransactionsStream(),
-            builder: (context, snapshot) {
-              final transactions = snapshot.data ?? [];
-
-              if (!snapshot.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              if (transactions.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Center(
-                    child: Text(
-                      'No transactions yet',
-                      style: TextStyle(color: Colors.grey),
-                    ),
+          filterDate != null || filterPrice != null
+              ? StreamBuilder<List<Transaction>>(
+                  stream: FirebaseService.getFilteredTransactionsStream(
+                    date: filterDate,
+                    minPrice: filterPrice,
                   ),
-                );
-              }
+                  builder: (context, snapshot) {
+                    final transactions = snapshot.data ?? [];
 
-              return Column(
-                children: List.generate(transactions.length, (index) {
-                  final Transaction transaction = transactions[index];
-                  return Padding(
-                    padding: EdgeInsetsGeometry.all(12),
-                    child: TransactionTile(
-                      transaction: transaction,
-                      isDark: isDark,
-                      colorScheme: themeProvider.themeData.colorScheme,
-                    ),
-                  );
-                }),
-              );
-            },
-          ),
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error loading transactions'));
+                    }
+
+                    if (!snapshot.hasData) {
+                      return Center(child: LoadingScreen());
+                    }
+
+                    if (transactions.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text(
+                            'No transactions yet',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        for (var transaction in transactions)
+                          Padding(
+                            padding: EdgeInsetsGeometry.all(12),
+                            child: TransactionTile(
+                              transaction: transaction,
+                              isDark: isDark,
+                              colorScheme: themeProvider.themeData.colorScheme,
+                            ),
+                          ),
+
+                        ...[SizedBox(height: 120)],
+                      ],
+                    );
+                  },
+                )
+              : StreamBuilder<List<Transaction>>(
+                  stream: FirebaseService.getAllTransactionsStream(),
+                  builder: (context, snapshot) {
+                    final transactions = snapshot.data ?? [];
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error loading transactions'));
+                    }
+
+                    if (!snapshot.hasData) {
+                      return Center(child: LoadingScreen());
+                    }
+
+                    if (transactions.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text(
+                            'No transactions yet',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        for (var transaction in transactions)
+                          Padding(
+                            padding: EdgeInsetsGeometry.all(12),
+                            child: TransactionTile(
+                              transaction: transaction,
+                              isDark: isDark,
+                              colorScheme: themeProvider.themeData.colorScheme,
+                            ),
+                          ),
+
+                        ...[SizedBox(height: 120)],
+                      ],
+                    );
+                  },
+                ),
         ],
       ),
     );

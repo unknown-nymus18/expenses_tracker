@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Expenses App',
+          title: 'Pence',
           theme: themeProvider.themeData,
           home: child,
         );

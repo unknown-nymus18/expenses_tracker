@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -306,7 +307,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                       // App Title
                       Text(
-                        'Expenses Tracker',
+                        'Pence',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -529,9 +530,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       elevation: 5,
                                     ),
                                     child: _isLoading
-                                        ? CircularProgressIndicator(
-                                            color: Colors.white,
-                                          )
+                                        ? LoadingScreen()
                                         : Text(
                                             _isLogin ? 'Sign In' : 'Sign Up',
                                             style: TextStyle(

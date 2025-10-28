@@ -72,6 +72,25 @@ class FirebaseService {
     }
   }
 
+  /// Update user's display name
+  static Future<void> updateUserName(String name) async {
+    try {
+      await auth.currentUser?.updateDisplayName(name);
+      await auth.currentUser?.reload();
+
+      // Update Firestore user document
+      if (userId != null) {
+        await _firestore.collection('users').doc(userId).update({
+          'name': name,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print('Update name error: $e');
+      rethrow;
+    }
+  }
+
   // ============ FIRESTORE BUDGET METHODS ============
 
   /// Save or update a monthly budget to Firestore
@@ -313,7 +332,7 @@ class FirebaseService {
     // Update category spent amount
     await _updateCategorySpentAmount(
       transaction.category,
-      double.parse(transaction.amount),
+      transaction.amount,
       isAdding: true,
     );
   }
@@ -336,8 +355,7 @@ class FirebaseService {
     }
 
     final category = budget.categories[categoryIndex];
-    final transactionAmount = double.tryParse(transaction.amount) ?? 0.0;
-    final newSpentAmount = category.spent + transactionAmount;
+    final newSpentAmount = category.spent + transaction.amount;
 
     // Check if budget is set for this category
     if (category.budgetAmount <= 0) {
@@ -360,7 +378,7 @@ class FirebaseService {
         'category': category.name,
         'currentSpent': category.spent,
         'budgetAmount': category.budgetAmount,
-        'transactionAmount': transactionAmount,
+        'transactionAmount': transaction.amount,
       };
     }
 
@@ -388,7 +406,7 @@ class FirebaseService {
 
     if (oldSnapshot.exists) {
       final oldData = oldSnapshot.data()!;
-      final oldAmount = double.parse(oldData['amount'] as String);
+      final oldAmount = (oldData['amount'] as num).toDouble();
       final oldCategory = oldData['category'] as String;
 
       // Subtract old amount from old category
@@ -411,7 +429,7 @@ class FirebaseService {
     // Add new amount to new category
     await _updateCategorySpentAmount(
       transaction.category,
-      double.parse(transaction.amount),
+      transaction.amount,
       isAdding: true,
     );
   }
@@ -429,7 +447,7 @@ class FirebaseService {
 
     if (snapshot.exists) {
       final data = snapshot.data()!;
-      final amount = double.parse(data['amount'] as String);
+      final amount = (data['amount'] as num).toDouble();
       final category = data['category'] as String;
 
       // Subtract amount from category
@@ -449,6 +467,8 @@ class FirebaseService {
   static Stream<List<models.Transaction>> getAllTransactionsStream() {
     if (userId == null) return Stream.value([]);
 
+    Future.delayed(Duration(seconds: 1), () {});
+
     return _firestore
         .collection('users')
         .doc(userId)
@@ -460,6 +480,55 @@ class FirebaseService {
               .map((doc) => _transactionFromFirestore(doc))
               .toList();
         });
+  }
+
+  /// Get filtered transactions as a stream
+  static Stream<List<models.Transaction>> getFilteredTransactionsStream({
+    DateTime? date,
+    double? minPrice,
+  }) {
+    if (userId == null) return Stream.value([]);
+
+    // Use client-side filtering to avoid Firestore index requirements
+    return getAllTransactionsStream().map((transactions) {
+      return transactions.where((transaction) {
+        // Filter by date if provided
+        if (date != null) {
+          final startOfDay = DateTime(date.year, date.month, date.day);
+          final endOfDay = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            23,
+            59,
+            59,
+          );
+          final isInDateRange =
+              transaction.createdAt.isAfter(
+                startOfDay.subtract(Duration(seconds: 1)),
+              ) &&
+              transaction.createdAt.isBefore(
+                endOfDay.add(Duration(seconds: 1)),
+              );
+          if (!isInDateRange) return false;
+        }
+
+        // Filter by minimum price if provided
+        if (minPrice != null) {
+          if (transaction.amount < minPrice) return false;
+        }
+
+        return true;
+      }).toList();
+    });
+  }
+
+  static Stream<List<models.Transaction>>
+  getTransactionsForCurrentMonthStream() {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    return getTransactionsByDateStream(startOfMonth, endOfMonth);
   }
 
   /// Get transactions by date range as a stream
@@ -548,10 +617,22 @@ class FirebaseService {
   /// Convert Firestore document to Transaction
   static models.Transaction _transactionFromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Handle both String and Number amount types (for migration)
+    double amount;
+    final amountData = data['amount'];
+    if (amountData is String) {
+      amount = double.tryParse(amountData) ?? 0.0;
+    } else if (amountData is num) {
+      amount = amountData.toDouble();
+    } else {
+      amount = 0.0;
+    }
+
     return models.Transaction(
       id: data['id'] as String,
       title: data['title'] as String,
-      amount: data['amount'] as String,
+      amount: amount,
       category: data['category'] as String,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       description: data['description'] as String?,
