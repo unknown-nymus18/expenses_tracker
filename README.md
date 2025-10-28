@@ -1,4 +1,4 @@
-# Expetrack
+# Pence
 
 A modern Flutter app for tracking expenses and monthly budgets. Expetrack uses Firebase for authentication and cloud data sync, and local storage (Hive) for user settings. It features animated charts, real-time updates, and a clean, theme-aware UI.
 
