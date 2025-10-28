@@ -1,7 +1,6 @@
 import 'package:expenses_app/components/calendar.dart';
 import 'package:expenses_app/components/category_card.dart';
 import 'package:expenses_app/components/functions.dart';
-import 'package:expenses_app/components/order_tile.dart';
 import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:expenses_app/services/firebase_service.dart';

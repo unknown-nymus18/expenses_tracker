@@ -61,9 +61,20 @@ class UserCard extends StatelessWidget {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "**** **** **** 1234",
-                            style: TextStyle(fontSize: 16, color: Colors.black),
+                          StreamBuilder(
+                            stream: FirebaseService.getUserCardNumberStream(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData == false) {
+                                return SizedBox.shrink();
+                              }
+                              return Text(
+                                snapshot.data!,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black,
+                                ),
+                              );
+                            },
                           ),
                           Text(
                             "\$${totalIncome.toStringAsFixed(2)}",

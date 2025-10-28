@@ -463,11 +463,28 @@ class FirebaseService {
     }
   }
 
+  static Stream<String> getUserCardNumberStream() {
+    if (userId == null) return Stream.value("");
+
+    return _firestore.collection('users').doc(userId).snapshots().map((
+      snapshot,
+    ) {
+      return snapshot.data()?['cardNumber'] ?? "";
+    });
+  }
+
+  static Future<void> updateUserCardNumber(String cardNumber) async {
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _firestore.collection('users').doc(userId).update({
+      'cardNumber': cardNumber,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Get all transactions as a stream
   static Stream<List<models.Transaction>> getAllTransactionsStream() {
     if (userId == null) return Stream.value([]);
-
-    Future.delayed(Duration(seconds: 1), () {});
 
     return _firestore
         .collection('users')

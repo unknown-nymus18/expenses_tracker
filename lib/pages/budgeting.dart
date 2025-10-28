@@ -1,8 +1,6 @@
 import 'dart:ui';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/models/budget_category.dart';
-import 'package:expenses_app/components/blur.dart';
-import 'package:expenses_app/components/category_card.dart';
 import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/models/monthly_budget.dart';
 import 'package:expenses_app/services/firebase_service.dart';
@@ -629,37 +627,33 @@ class _BudgetingPageState extends State<BudgetingPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(height: 8),
-                          Row(
+                          Column(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'Budget: \$${category.budgetAmount.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.grey[300]
-                                        : Colors.grey[600],
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                'Budget: \$${category.budgetAmount.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey[300]
+                                      : Colors.grey[600],
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                               SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  'Spent: \$${category.spent.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.grey[300]
-                                        : Colors.grey[600],
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
+                              Text(
+                                'Spent: \$${category.spent.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey[300]
+                                      : Colors.grey[600],
                                 ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
                               ),
                             ],
                           ),

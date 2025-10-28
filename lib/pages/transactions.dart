@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:expenses_app/components/card_add.dart';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/loading_screen.dart';
-import 'package:expenses_app/components/order_tile.dart';
 import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/components/user_card.dart';
 import 'package:expenses_app/services/firebase_service.dart';
@@ -402,30 +401,38 @@ class _TransactionsState extends State<Transactions> {
               Column(
                 spacing: 10,
                 children: [
-                  Container(
-                    padding: EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: BoxBorder.all(
-                        width: 2,
-                        color: Provider.of<ThemeProvider>(
-                          context,
-                        ).themeData.colorScheme.primary,
+                  GestureDetector(
+                    onTap: addTransaction,
+                    child: Container(
+                      padding: EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: BoxBorder.all(
+                          width: 2,
+                          color: Provider.of<ThemeProvider>(
+                            context,
+                          ).themeData.colorScheme.primary,
+                        ),
                       ),
-                    ),
-                    child: IconButton(
-                      onPressed: addTransaction,
-                      icon: Icon(Icons.add),
+                      child: Column(
+                        children: [
+                          Icon(Icons.add),
+                          Text("Add"),
+                          Text("Transaction"),
+                        ],
+                      ),
                     ),
                   ),
                   CardAdd(
                     color: Color.fromRGBO(210, 249, 231, 1),
                     onPressed: addIncome,
+                    text: "Add Income",
                   ),
-                  CardAdd(
-                    color: Color.fromRGBO(255, 215, 142, 1),
-                    onPressed: () {},
-                  ),
+                  // CardAdd(
+                  //   color: Color.fromRGBO(255, 215, 142, 1),
+                  //   onPressed: () {},
+                  //   text: "Add Expense",
+                  // ),
                 ],
               ),
             ],

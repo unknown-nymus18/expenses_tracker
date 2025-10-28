@@ -124,6 +124,46 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _addCardNumber() {
+    TextEditingController _cardNumberController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add Card Number'),
+          content: TextField(
+            controller: _cardNumberController,
+            decoration: InputDecoration(
+              labelText: 'Card Number',
+              hintText: 'Enter your card number',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              prefixIcon: Icon(Icons.credit_card),
+            ),
+            keyboardType: TextInputType.number,
+            maxLength: 16,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                FirebaseService.updateUserCardNumber(
+                  _cardNumberController.text.trim(),
+                );
+                Navigator.pop(context);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -303,6 +343,65 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: 'Edit Profile',
                 subtitle: 'Update your name and information',
                 onTap: _showEditProfileDialog,
+              ),
+
+              StreamBuilder(
+                stream: FirebaseService.getUserCardNumberStream(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return SizedBox.shrink();
+                  }
+                  if (snapshot.data == null || snapshot.data!.isEmpty) {
+                    return Container(
+                      margin: EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Provider.of<ThemeProvider>(
+                          context,
+                        ).themeData.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Provider.of<ThemeProvider>(
+                              context,
+                            ).themeData.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.credit_card,
+                            color: Provider.of<ThemeProvider>(
+                              context,
+                            ).themeData.colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          'Add Card Number',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Provider.of<ThemeProvider>(
+                              context,
+                            ).themeData.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: _addCardNumber,
+                      ),
+                    );
+                  }
+                  return _buildSettingTile(
+                    icon: Icons.credit_card,
+                    title: 'Card Number',
+                    subtitle: snapshot.data!,
+                    onTap: _addCardNumber,
+                  );
+                },
               ),
 
               SizedBox(height: 40),

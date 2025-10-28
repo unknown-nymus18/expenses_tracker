@@ -3,7 +3,6 @@ import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/models/transaction.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class TransactionDetails extends StatelessWidget {
