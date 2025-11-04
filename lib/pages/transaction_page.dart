@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/models/transaction.dart';
 import 'package:expenses_app/providers/theme_provider.dart';

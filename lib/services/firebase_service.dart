@@ -30,6 +30,14 @@ class FirebaseService {
     });
   }
 
+  static Future<void> addMonthCategory(BudgetCategory category) async {
+    final budget = await FirebaseService.getCurrentMonthBudget();
+    if (budget != null) {
+      budget.categories.add(category);
+      await FirebaseService.saveMonthlyBudget(budget);
+    }
+  }
+
   Future<void> deleteUserContainer() async {
     await _firestore.collection('users').doc(auth.currentUser?.uid).delete();
   }

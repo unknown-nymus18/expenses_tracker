@@ -1,9 +1,11 @@
+import 'dart:math';
 import 'dart:ui';
 import 'package:expenses_app/components/card_add.dart';
 import 'package:expenses_app/components/functions.dart';
 import 'package:expenses_app/components/loading_screen.dart';
 import 'package:expenses_app/components/transaction_tile.dart';
 import 'package:expenses_app/components/user_card.dart';
+import 'package:expenses_app/models/budget_category.dart';
 import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/models/transaction.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
@@ -333,6 +335,64 @@ class _TransactionsState extends State<Transactions> {
     }
   }
 
+  void addCategory() {
+    TextEditingController categoryController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+          child: AlertDialog(
+            title: Text('Add Category'),
+            content: TextField(
+              controller: categoryController,
+              decoration: InputDecoration(hintText: 'Enter category name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Category addition cancelled')),
+                  );
+                },
+                child: Text('Close'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (categoryController.text.isNotEmpty) {
+                    FirebaseService.addMonthCategory(
+                      BudgetCategory(
+                        id: DateTime.now().toString(),
+                        name: categoryController.text,
+                        colorValue: Colors
+                            .primaries[Random().nextInt(
+                              Colors.primaries.length,
+                            )]
+                            .value,
+                        budgetAmount: 0.0,
+                      ),
+                    );
+                    Navigator.pop(context);
+                    setState(() {});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Category added successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+                child: Text('Add Category'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void showFilterDialogue() {
     showDialog(
       context: context,
@@ -425,14 +485,9 @@ class _TransactionsState extends State<Transactions> {
                   ),
                   CardAdd(
                     color: Color.fromRGBO(210, 249, 231, 1),
-                    onPressed: addIncome,
-                    text: "Add Income",
+                    onPressed: addCategory,
+                    text: "Add Category",
                   ),
-                  // CardAdd(
-                  //   color: Color.fromRGBO(255, 215, 142, 1),
-                  //   onPressed: () {},
-                  //   text: "Add Expense",
-                  // ),
                 ],
               ),
             ],
