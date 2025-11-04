@@ -16,7 +16,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  int pageIndex = 2;
+  int pageIndex = 0;
 
   void changePage(int index) {
     if (index == pageIndex) return;

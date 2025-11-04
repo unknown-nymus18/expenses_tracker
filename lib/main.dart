@@ -1,4 +1,5 @@
-﻿import 'package:expenses_app/models/HiveService.dart';
+﻿import 'package:expenses_app/firebase_options.dart';
+import 'package:expenses_app/models/HiveService.dart';
 import 'package:expenses_app/pages/auth_gate.dart';
 import 'package:expenses_app/providers/bottom_navbar_manager.dart';
 import 'package:expenses_app/providers/theme_provider.dart';
@@ -8,12 +9,19 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Firebase initialization failed
+  }
 
   try {
     await HiveService.init();
   } catch (e) {
-    print('Hive initialization error: $e');
+    // Hive initialization failed
   }
 
   runApp(

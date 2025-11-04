@@ -6,16 +6,40 @@ class HiveService {
   static final String _settingsBoxName = 'settings';
 
   static Future<void> init() async {
-    await Hive.initFlutter();
+    try {
+      print('🔧 Initializing Hive...');
+      await Hive.initFlutter();
+      print('✅ Hive.initFlutter() completed');
 
-    Hive.registerAdapter(SettingsStateAdapter());
+      print('🔧 Registering SettingsStateAdapter...');
+      if (!Hive.isAdapterRegistered(3)) {
+        // typeId is 3
+        Hive.registerAdapter(SettingsStateAdapter());
+        print('✅ SettingsStateAdapter registered with typeId 3');
+      } else {
+        print('⚠️ SettingsStateAdapter already registered');
+      }
 
-    await Hive.openBox<SettingsState>(_settingsBoxName);
+      print('🔧 Opening settings box...');
+      await Hive.openBox<SettingsState>(_settingsBoxName);
+      print('✅ Settings box opened');
 
-    // Initialize default settings if none exist
-    if (_settingsBox.isEmpty) {
-      final defaultSettings = SettingsState(isDarkMode: false, fontSize: 14);
-      await _settingsBox.put('settings', defaultSettings);
+      // Initialize default settings if none exist
+      if (_settingsBox.isEmpty) {
+        print('🔧 Creating default settings...');
+        final defaultSettings = SettingsState(isDarkMode: false, fontSize: 14);
+        await _settingsBox.put('settings', defaultSettings);
+        print('✅ Default settings created');
+      } else {
+        print('✅ Existing settings found');
+      }
+
+      print('✅ Hive initialization complete');
+    } catch (e, stackTrace) {
+      print('❌ Hive initialization error: $e');
+      print('Stack trace: $stackTrace');
+      // Don't rethrow - let the app continue even if Hive fails
+      // The app will use default settings
     }
   }
 

@@ -63,7 +63,7 @@ class FirebaseService {
     }
   }
 
-  Future<void> signOut() async {
+  static Future<void> signOut() async {
     try {
       await auth.signOut();
     } catch (e) {
@@ -90,8 +90,6 @@ class FirebaseService {
       rethrow;
     }
   }
-
-  // ============ FIRESTORE BUDGET METHODS ============
 
   /// Save or update a monthly budget to Firestore
   static Future<void> saveMonthlyBudget(MonthlyBudget budget) async {
@@ -125,61 +123,130 @@ class FirebaseService {
 
   /// Get current month's budget as a stream
   static Stream<MonthlyBudget?> getCurrentMonthBudgetStream() {
-    if (userId == null) return Stream.value(null);
+    if (userId == null) {
+      print('⚠️ getCurrentMonthBudgetStream: User not authenticated');
+      return Stream.value(null);
+    }
 
-    final now = DateTime.now();
-    final monthKey = DateFormat('yyyy-MM').format(now);
+    try {
+      final now = DateTime.now();
+      final monthKey = DateFormat('yyyy-MM').format(now);
 
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('budgets')
-        .doc(monthKey)
-        .snapshots()
-        .asyncMap((snapshot) async {
-          if (!snapshot.exists) {
-            // Create default budget with categories on first access
-            final defaultBudget = MonthlyBudget(
-              id: monthKey,
-              month: now,
-              totalIncome: 0.0,
-              categories: getDefaultCategories(),
-              createdAt: now,
-            );
-            await saveMonthlyBudget(defaultBudget);
-            return defaultBudget;
-          }
-          return _budgetFromFirestore(snapshot);
-        });
+      return _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('budgets')
+          .doc(monthKey)
+          .snapshots()
+          .asyncMap((snapshot) async {
+            try {
+              if (!snapshot.exists) {
+                print('📅 Creating default budget for stream: $monthKey');
+
+                // Create default budget with categories on first access
+                final defaultBudget = MonthlyBudget(
+                  id: monthKey,
+                  month: now,
+                  totalIncome: 0.0,
+                  categories: getDefaultCategories(),
+                  createdAt: now,
+                );
+
+                try {
+                  await saveMonthlyBudget(defaultBudget);
+                  print('✅ Default budget created successfully in stream');
+                } catch (saveError) {
+                  print('❌ Error saving budget in stream: $saveError');
+                }
+
+                return defaultBudget;
+              }
+              return _budgetFromFirestore(snapshot);
+            } catch (e) {
+              print('❌ Error processing budget snapshot: $e');
+              // Return default budget to prevent stream from breaking
+              return MonthlyBudget(
+                id: monthKey,
+                month: now,
+                totalIncome: 0.0,
+                categories: getDefaultCategories(),
+                createdAt: now,
+              );
+            }
+          })
+          .handleError((error) {
+            print('❌ Stream error in getCurrentMonthBudgetStream: $error');
+          });
+    } catch (e) {
+      print('❌ Error setting up budget stream: $e');
+      // Return a stream with default budget
+      return Stream.value(
+        MonthlyBudget(
+          id: DateFormat('yyyy-MM').format(DateTime.now()),
+          month: DateTime.now(),
+          totalIncome: 0.0,
+          categories: getDefaultCategories(),
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
   }
 
   /// Get current month's budget once
   static Future<MonthlyBudget?> getCurrentMonthBudget() async {
-    if (userId == null) return null;
+    if (userId == null) {
+      print('⚠️ getCurrentMonthBudget: User not authenticated');
+      return null;
+    }
 
-    final now = DateTime.now();
-    final monthKey = DateFormat('yyyy-MM').format(now);
+    try {
+      final now = DateTime.now();
+      final monthKey = DateFormat('yyyy-MM').format(now);
 
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('budgets')
-        .doc(monthKey)
-        .get();
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('budgets')
+          .doc(monthKey)
+          .get();
 
-    if (!snapshot.exists) {
-      // Create default budget with categories on first access
-      final defaultBudget = MonthlyBudget(
-        id: monthKey,
-        month: now,
+      if (!snapshot.exists) {
+        print('📅 Creating default budget for $monthKey');
+
+        // Create default budget with categories on first access
+        final defaultBudget = MonthlyBudget(
+          id: monthKey,
+          month: now,
+          totalIncome: 0.0,
+          categories: getDefaultCategories(),
+          createdAt: now,
+        );
+
+        try {
+          await saveMonthlyBudget(defaultBudget);
+          print('✅ Default budget created successfully');
+          return defaultBudget;
+        } catch (saveError) {
+          print('❌ Error saving default budget: $saveError');
+          // Return the budget anyway so the app doesn't crash
+          return defaultBudget;
+        }
+      }
+
+      return _budgetFromFirestore(snapshot);
+    } catch (e, stackTrace) {
+      print('❌ Error in getCurrentMonthBudget: $e');
+      print('Stack trace: $stackTrace');
+
+      // Return a minimal default budget to prevent crash
+      return MonthlyBudget(
+        id: DateFormat('yyyy-MM').format(DateTime.now()),
+        month: DateTime.now(),
         totalIncome: 0.0,
         categories: getDefaultCategories(),
-        createdAt: now,
+        createdAt: DateTime.now(),
       );
-      await saveMonthlyBudget(defaultBudget);
-      return defaultBudget;
     }
-    return _budgetFromFirestore(snapshot);
   }
 
   /// Get all budgets as a stream
@@ -683,10 +750,7 @@ class FirebaseService {
     }
   }
 
-  // ============ MIGRATION METHODS ============
-
   /// Migrate all Hive data to Firestore for the current user
-  /// This should be called once after user signs in to move existing local data to cloud
   static Future<void> migrateHiveDataToFirestore({
     required List<MonthlyBudget> hiveBudgets,
     required List<models.Transaction> hiveTransactions,
@@ -712,8 +776,6 @@ class FirebaseService {
     // Migrate transactions
     for (var transaction in hiveTransactions) {
       try {
-        // Use set instead of addTransaction to avoid duplicate spent amount updates
-        // (since budgets already have spent amounts calculated)
         await _firestore
             .collection('users')
             .doc(userId)
@@ -734,5 +796,50 @@ class FirebaseService {
     }
 
     print('Migration completed!');
+  }
+
+  static Future<void> deleteUserData() async {
+    if (userId == null) {
+      return;
+    }
+
+    try {
+      final userDoc = _firestore.collection('users').doc(userId);
+
+      // Delete all transactions
+      final transactionsSnapshot = await userDoc
+          .collection('transactions')
+          .get();
+      for (var doc in transactionsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete all budgets
+      final budgetsSnapshot = await userDoc.collection('budgets').get();
+      for (var doc in budgetsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete the main user document
+      await userDoc.delete();
+    } catch (e) {
+      print('Error deleting user data: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteAccount() async {
+    if (userId == null) {
+      return {'success': false, 'message': 'User not authenticated'};
+    }
+
+    try {
+      await deleteUserData();
+      await auth.currentUser?.delete();
+      await signOut();
+      return {'success': true, 'message': 'Account deleted successfully'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error deleting account: $e'};
+    }
   }
 }

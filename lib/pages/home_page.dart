@@ -68,6 +68,56 @@ class _HomePageState extends State<HomePage> {
                             itemCount: categories.length,
                             itemBuilder: (context, index) {
                               final category = categories[index];
+
+                              // Calculate daily spending for this category (last 7 days including today)
+                              final now = DateTime.now();
+                              final List<double> dailySpending = [];
+
+                              for (
+                                int dayIndex = 6;
+                                dayIndex >= 0;
+                                dayIndex--
+                              ) {
+                                // Get the target day
+                                final targetDate = now.subtract(
+                                  Duration(days: dayIndex),
+                                );
+                                final dayStart = DateTime(
+                                  targetDate.year,
+                                  targetDate.month,
+                                  targetDate.day,
+                                );
+                                final dayEnd = DateTime(
+                                  targetDate.year,
+                                  targetDate.month,
+                                  targetDate.day,
+                                  23,
+                                  59,
+                                  59,
+                                );
+
+                                // Sum transactions for this category on this day
+                                final dayTotal = transactions
+                                    .where((t) {
+                                      return t.category.toLowerCase() ==
+                                              category.name.toLowerCase() &&
+                                          t.createdAt.isAfter(
+                                            dayStart.subtract(
+                                              Duration(seconds: 1),
+                                            ),
+                                          ) &&
+                                          t.createdAt.isBefore(
+                                            dayEnd.add(Duration(seconds: 1)),
+                                          );
+                                    })
+                                    .fold<double>(
+                                      0,
+                                      (sum, t) => sum + t.amount,
+                                    );
+
+                                dailySpending.add(dayTotal);
+                              }
+
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8.0,
@@ -77,6 +127,7 @@ class _HomePageState extends State<HomePage> {
                                   category: category.name,
                                   totalAmount: category.budgetAmount,
                                   used: category.spent,
+                                  dailySpending: dailySpending,
                                 ),
                               );
                             },

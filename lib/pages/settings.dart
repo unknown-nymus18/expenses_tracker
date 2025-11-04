@@ -6,6 +6,7 @@ import 'package:expenses_app/services/firebase_service.dart';
 import 'package:expenses_app/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -106,6 +107,71 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
     _controller3.dispose();
     controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open link'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void deleteAccount() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Account?'),
+          content: Text(
+            'This will permanently delete your account and all associated data. This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                FirebaseService.deleteAccount().then((result) {
+                  if (result['success']) {
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Account deleted successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Error deleting account: ${result['error']}',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                });
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -349,15 +415,15 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                     // Security Section
                     // Data Management Section
                     _buildSectionHeader('Data Management'),
-                    _buildSettingTile(
-                      icon: Icons.backup,
-                      title: 'Export Data',
-                      subtitle: 'Save as CSV or PDF',
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        // Navigate to export options
-                      },
-                    ),
+                    // _buildSettingTile(
+                    //   icon: Icons.backup,
+                    //   title: 'Export Data',
+                    //   subtitle: 'Save as CSV or PDF',
+                    //   trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    //   onTap: () {
+                    //     // Navigate to export options
+                    //   },
+                    // ),
                     _buildSettingTile(
                       icon: Icons.delete_forever,
                       title: 'Clear All Data',
@@ -377,13 +443,30 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                       icon: Icons.info,
                       title: 'App Version',
                       subtitle: '1.0.0',
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AboutDialog(
+                              applicationName: "Pence",
+                              applicationVersion: "1.0.0",
+                              applicationIcon: Icon(
+                                Icons.account_balance_wallet,
+                              ),
+                              applicationLegalese: "© 2025 Pence",
+                            );
+                          },
+                        );
+                      },
                     ),
                     _buildSettingTile(
                       icon: Icons.help,
                       title: 'Help & Support',
                       trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Navigate to help
+                        _launchURL(
+                          'https://unknown-nymus18.github.io/portfolio/contact.html',
+                        );
                       },
                     ),
 
@@ -397,8 +480,7 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                       textColor: Colors.red,
                       onTap: () async {
                         try {
-                          final firebaseService = FirebaseService();
-                          await firebaseService.signOut();
+                          await FirebaseService.signOut();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -418,6 +500,12 @@ class _SettingsState extends State<Settings> with TickerProviderStateMixin {
                           }
                         }
                       },
+                    ),
+                    _buildSettingTile(
+                      icon: Icons.delete,
+                      title: "Delete Account",
+                      textColor: Colors.red,
+                      onTap: deleteAccount,
                     ),
                     SizedBox(height: 100),
                   ],

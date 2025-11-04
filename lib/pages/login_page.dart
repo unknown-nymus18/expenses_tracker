@@ -297,10 +297,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.account_balance_wallet,
-                          size: 50,
-                          color: Colors.white,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(50),
+                          child: Image.asset(
+                            'assets/icon/app_icon.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                       SizedBox(height: 24),

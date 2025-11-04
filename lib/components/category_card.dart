@@ -5,12 +5,15 @@ class CategoryCard extends StatelessWidget {
   final double totalAmount;
   final double? used;
   final Color color;
+  final List<double>? dailySpending; // Weekly spending data (last 6 weeks)
+
   const CategoryCard({
     super.key,
     required this.color,
     required this.totalAmount,
     required this.category,
     required this.used,
+    this.dailySpending,
   });
 
   @override
@@ -101,7 +104,10 @@ class CategoryCard extends StatelessWidget {
           SizedBox(
             height: 40,
             child: CustomPaint(
-              painter: SimpleChartPainter(),
+              painter: SimpleChartPainter(
+                dataPoints: dailySpending ?? [],
+                color: Colors.black,
+              ),
               size: Size(double.infinity, 40),
             ),
           ),
@@ -111,33 +117,116 @@ class CategoryCard extends StatelessWidget {
   }
 }
 
-// Simple chart painter for the line graph
 class SimpleChartPainter extends CustomPainter {
+  final List<double> dataPoints;
+  final Color color;
+
+  SimpleChartPainter({required this.dataPoints, required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
+    // Debug output
+    print('Chart painting - DataPoints: $dataPoints, Size: $size');
+
+    if (dataPoints.isEmpty || size.width <= 0 || size.height <= 0) {
+      // If no data, draw a flat line
+      final paint = Paint()
+        ..color = color.withOpacity(0.3)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(
+        Offset(0, size.height / 2),
+        Offset(size.width, size.height / 2),
+        paint,
+      );
+      return;
+    }
+
     final paint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Find max value for scaling
+    final maxValue = dataPoints.reduce((a, b) => a > b ? a : b);
+    final minValue = dataPoints.reduce((a, b) => a < b ? a : b);
+
+    print('Max: $maxValue, Min: $minValue');
+
+    if (maxValue == 0) {
+      // If all values are zero, draw a flat line at bottom
+      final flatLinePaint = Paint()
+        ..color = color.withOpacity(0.3)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(
+        Offset(0, size.height - 5),
+        Offset(size.width, size.height - 5),
+        flatLinePaint,
+      );
+      print('All values are zero - drawing flat line');
+      return;
+    }
+
+    // If all values are the same (but not zero), use a small range for visualization
+    final valueRange = maxValue - minValue;
+    final useFullScale = valueRange > 0;
 
     final path = Path();
-    final points = [
-      Offset(0, size.height * 0.7),
-      Offset(size.width * 0.2, size.height * 0.5),
-      Offset(size.width * 0.4, size.height * 0.8),
-      Offset(size.width * 0.6, size.height * 0.3),
-      Offset(size.width * 0.8, size.height * 0.6),
-      Offset(size.width, size.height * 0.2),
-    ];
+    final pointSpacing = dataPoints.length > 1
+        ? size.width / (dataPoints.length - 1)
+        : size.width / 2;
 
-    path.moveTo(points[0].dx, points[0].dy);
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
+    // Create path from real data points
+    for (int i = 0; i < dataPoints.length; i++) {
+      final x = i * pointSpacing;
+
+      double normalizedValue;
+      if (useFullScale) {
+        // Use the range of values for better visualization
+        normalizedValue = (dataPoints[i] - minValue) / valueRange;
+      } else {
+        // All values are the same - draw in middle
+        normalizedValue = 0.5;
+      }
+
+      final y = size.height - (normalizedValue * (size.height - 10)) - 5;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
 
     canvas.drawPath(path, paint);
+
+    // Draw dots at each data point
+    final dotPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < dataPoints.length; i++) {
+      final x = i * pointSpacing;
+
+      double normalizedValue;
+      if (useFullScale) {
+        normalizedValue = (dataPoints[i] - minValue) / valueRange;
+      } else {
+        normalizedValue = 0.5;
+      }
+
+      final y = size.height - (normalizedValue * (size.height - 10)) - 5;
+      canvas.drawCircle(Offset(x, y), 2.5, dotPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(SimpleChartPainter oldDelegate) {
+    return oldDelegate.dataPoints != dataPoints || oldDelegate.color != color;
+  }
 }
