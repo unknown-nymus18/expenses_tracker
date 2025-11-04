@@ -1,3 +1,5 @@
+import 'package:expenses_app/services/firebase_service.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 class CategoryCard extends StatelessWidget {
@@ -18,6 +20,39 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void deleteCategory() {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Delete Category'),
+            content: Text('Are you sure you want to delete this category?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  FirebaseService.deleteCategoryByName(category);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Category deleted'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
     return Container(
       height: 200,
       padding: const EdgeInsets.all(20),
@@ -56,28 +91,40 @@ class CategoryCard extends StatelessWidget {
                     category,
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  used == null || totalAmount == 0
-                      ? '0%'
-                      : '${((totalAmount - used!) / totalAmount) * 100}%',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      used == null || totalAmount == 0
+                          ? '0%'
+                          : '${((totalAmount - used!) / totalAmount) * 100}%',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                  SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: deleteCategory,
+                    child: Icon(
+                      Icons.delete,
+                      color: const Color.fromARGB(255, 173, 30, 20),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

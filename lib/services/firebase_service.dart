@@ -80,6 +80,16 @@ class FirebaseService {
     }
   }
 
+  static Future<void> deleteCategoryByName(String categoryName) async {
+    if (userId == null) throw Exception('User not authenticated');
+
+    final budget = await getCurrentMonthBudget();
+    if (budget != null) {
+      budget.categories.removeWhere((cat) => cat.name == categoryName);
+      await saveMonthlyBudget(budget);
+    }
+  }
+
   /// Update user's display name
   static Future<void> updateUserName(String name) async {
     try {
